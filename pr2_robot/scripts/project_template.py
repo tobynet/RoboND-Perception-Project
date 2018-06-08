@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# To run
+#  
+#   $ roslaunch pr2_robot pick_place_project.launch
+#
+# In another terminal
+#
+#   $ rosrun pr2_robot project_template.py
 
 # Import modules
 import numpy as np
@@ -13,6 +22,7 @@ from sensor_stick.marker_tools import *
 from sensor_stick.msg import DetectedObjectsArray
 from sensor_stick.msg import DetectedObject
 from sensor_stick.pcl_helper import *
+import sensor_msgs.point_cloud2 as pc2
 
 import rospy
 import tf
@@ -23,6 +33,160 @@ from std_msgs.msg import String
 from pr2_robot.srv import *
 from rospy_message_converter import message_converter
 import yaml
+import pcl
+
+
+def statistical_outlier_filter(cloud, mean_k = 50, threshold = 1.0):
+    """
+    statistical outlier filter
+
+    params:
+        cloud: pcl.PCLPointCloud2
+        mean_k:
+        threshold:
+    returns: 
+        pcl.PCLPointCloud2
+    
+    ref. http://pointclouds.org/documentation/tutorials/statistical_outlier.php
+    """
+
+    # Much like the previous filters, we start by creating a filter object: 
+    outlier_filter = cloud.make_statistical_outlier_filter()
+
+    # Set the number of neighboring points to analyze for any given point
+    outlier_filter.set_mean_k(mean_k)
+
+    # Any point with a mean distance larger than global (mean distance+x*std_dev) will be considered outlier
+    outlier_filter.set_std_dev_mul_thresh(threshold)
+
+    # Finally call the filter function for magic
+    return outlier_filter.filter()
+
+
+def voxel_filter(cloud, leaf_size = 0.01):
+    """
+    Voxel Grid filter for input point cloud(Downsampling filter)
+
+    params:
+        cloud: pcl.PCLPointCloud2
+        leaf_size: The size of voxel grid. 
+                   Large number is more downsampling.
+    returns:
+        filtered cloud: pcl.PCLPointCloud2
+    """
+
+    vox = cloud.make_voxel_grid_filter()
+    # voxel size (also known as `leaf`)
+    vox.set_leaf_size(leaf_size, leaf_size, leaf_size)
+    return vox.filter()
+
+
+def pass_through_filter(cloud, filter_axis='z', axis_limit=(0.6, 1.1)):
+    """
+    Cut off filter
+
+    Params:
+        cloud: pcl.PCLPointCloud2
+        filter_axis: 'z'|'y'|'x' axis 
+        axis_limit: range
+
+    Returns:
+        filtered cloud: pcl.PCLPointCloud2
+    """
+
+    # Create a PassThrough filter object.
+    passthrough = cloud.make_passthrough_filter()
+
+    # Assign axis and range to the passthrough filter object.
+    passthrough.set_filter_field_name(filter_axis)
+    passthrough.set_filter_limits(axis_limit[0], axis_limit[1])
+
+    return passthrough.filter()
+
+
+def ransac_plane_segmentation(cloud, max_distance = 0.010):
+    """
+    Segmentation By RANSAC
+
+    params:
+        cloud: pcl.PCLPointCloud2
+        max_distance: The float of threshold.
+
+    returns:
+        inliers: PointIndices 
+    """
+
+    # RANSAC plane segmentation
+    seg = cloud.make_segmenter()
+    seg.set_model_type(pcl.SACMODEL_PLANE)
+    seg.set_method_type(pcl.SAC_RANSAC)
+
+    # Set threshold
+    # 1..0.1 : xx
+    # 0.01.. : OK!
+    seg.set_distance_threshold(max_distance)
+
+    # Get inlier points
+    inliers, _ = seg.segment()
+    return  inliers
+
+
+def euclidean_clustering(cloud, tolerance=0.001, cluster_range=(10,250)):
+    """
+    Euclidean Clustering using PCL with k-d tree
+
+    returns:
+        cluster_indices, white_cloud
+    """
+
+    # Obtain the Point Cloud with only XYZ, and convert k-d tree for PCL.
+    white_cloud = XYZRGB_to_XYZ(cloud)
+    kdtree = white_cloud.make_kdtree()
+
+    # Create a cluster extraction object
+    ec = white_cloud.make_EuclideanClusterExtraction()
+    
+    # Set tolerances for distance threshold 
+    # as well as minimum and maximum cluster size (in points)
+    # NOTE: These are poor choices of clustering parameters
+    # Your task is to experiment and find values that work for segmenting objects.
+    ec.set_ClusterTolerance(tolerance)
+    ec.set_MinClusterSize(cluster_range[0])
+    ec.set_MaxClusterSize(cluster_range[1])
+    
+    # Search the k-d tree for clusters
+    # k-d tree でクラスタリングする
+    ec.set_SearchMethod(kdtree)
+
+    # Extract indices for each of the discovered clusters
+    # クラスタリングした点群の index を取り出す
+    indices = ec.Extract()
+    return indices, white_cloud
+
+
+def create_colored_cluster_cloud(cluster_indices, white_cloud):
+    """
+    Group Point Cloud by color
+    
+    params:
+        cluster_indices: [PointIndices]
+        white_cloud: pcl.PointCloud_PointXYZ
+
+    returns: pcl.PointCloud_PointXYZRGB
+        XYZ -> XYZRGB
+    """
+    cluster_color = get_color_list(len(cluster_indices))
+    color_cluster_point_list = []
+
+    for j, indices in enumerate(cluster_indices):
+        for _, indice in enumerate(indices):
+            color_cluster_point_list.append([
+                white_cloud[indice][0], white_cloud[indice][1], white_cloud[indice][2],
+                rgb_to_float(cluster_color[j])])
+
+    cluster_cloud = pcl.PointCloud_PointXYZRGB()
+    cluster_cloud.from_list(color_cluster_point_list)
+    return cluster_cloud
 
 
 # Helper function to get surface normals
@@ -48,30 +212,71 @@ def send_to_yaml(yaml_filename, dict_list):
 
 # Callback function for your Point Cloud Subscriber
 def pcl_callback(pcl_msg):
+    rospy.loginfo(' Begin pcl_callback...')
 
-# Exercise-2 TODOs:
+    # Exercise-2 TODOs:
 
-    # TODO: Convert ROS msg to PCL data
-    
-    # TODO: Statistical Outlier Filtering
+    # DONE: Convert ROS msg to PCL data
+    # Using PointXYZRGB
+    cloud = ros_to_pcl(pcl_msg)
 
-    # TODO: Voxel Grid Downsampling
+    cloud_filtered = cloud
 
-    # TODO: PassThrough Filter
+    # DONE: Statistical Outlier Filtering
+    cloud_filtered = statistical_outlier_filter(cloud_filtered, mean_k=5, threshold=0.0001)
 
-    # TODO: RANSAC Plane Segmentation
+    # DONE: Voxel Grid Downsampling
+    cloud_filtered = voxel_filter(cloud_filtered, leaf_size=0.01)
 
-    # TODO: Extract inliers and outliers
+    # DONE: PassThrough Filter
+    # Cut off the table top by z-axis.
+    cloud_filtered = pass_through_filter(cloud_filtered, 
+        filter_axis='z', axis_limit=(0.6, 1.1))
+    # Cut off the near side of the table by x-axis.
+    cloud_filtered = pass_through_filter(cloud_filtered,
+        filter_axis='x', axis_limit=(0.33, 1.39))
+    # Cut off the side of the table by y-axis.
+    cloud_filtered = pass_through_filter(cloud_filtered,
+        filter_axis='y', axis_limit=(-0.46, 0.46))
 
-    # TODO: Euclidean Clustering
+    # DONE: RANSAC Plane Segmentation
+    inliers = ransac_plane_segmentation(cloud_filtered)
+    # rospy.loginfo('type inliers after ransac_plane_segmentation %s ' % type(inliers))
 
-    # TODO: Create Cluster-Mask Point Cloud to visualize each cluster separately
+    # DONE: Extract inliers and outliers
+    cloud_table = cloud_filtered.extract(inliers, negative=False)
+    cloud_objects = cloud_filtered.extract(inliers, negative=True)
+    # rospy.loginfo(' cloud_objects: %d' % (cloud_objects.size))
 
-    # TODO: Convert PCL data to ROS messages
+    # DONE: Euclidean Clustering
+    cluster_indices, white_cloud = euclidean_clustering(cloud_objects,
+        tolerance=0.02, cluster_range=(100,15000))
+    # rospy.loginfo(' cluster_indices: %d, white_cloud: %d ' % (len(cluster_indices), white_cloud.size))
 
-    # TODO: Publish ROS messages
+    # DONE: Create Cluster-Mask Point Cloud to visualize each cluster separately
+    cluster_cloud = create_colored_cluster_cloud(cluster_indices, white_cloud)
+    # rospy.loginfo(' colored cluster: %d' % (cluster_cloud.size))
+
+    # DONE: Convert PCL data to ROS messages
+    ros_cloud_objects = pcl_to_ros(cloud_objects)
+    ros_cloud_table = pcl_to_ros(cloud_table)
+    ros_cluster_cloud = pcl_to_ros(cluster_cloud)
+
+
+    # DONE: Publish ROS messages
+    rospy.loginfo(' Publish objects cloud')
+    pcl_objects_pub.publish(ros_cloud_objects)
+
+    rospy.loginfo(' Publish table cloud')
+    pcl_table_pub.publish(ros_cloud_table)
+
+    rospy.loginfo(' Publish cluster_cloud')
+    pcl_cluster_pub.publish(ros_cluster_cloud)
+
+    return
 
 # Exercise-3 TODOs:
+    detected_objects_list = []
 
     # Classify the clusters! (loop through each detected cluster one at a time)
 
@@ -136,15 +341,52 @@ def pr2_mover(object_list):
 
 if __name__ == '__main__':
 
-    # TODO: ROS node initialization
+    rospy.loginfo('Initializing pr2-robot...')
+    # DONE: ROS node initialization
+    rospy.init_node('pr2-robot', anonymous=True)
 
-    # TODO: Create Subscribers
+    # DONE: Create Subscribers
+    # PointCloud 用のメッセージを受け取って処理する
+    pcl_sub = rospy.Subscriber('/pr2/world/points', pc2.PointCloud2, pcl_callback, queue_size=1)
+    rospy.loginfo('Created subscriber')
 
-    # TODO: Create Publishers
+
+    # DONE: Create Publishers
+
+    # For debugging publisher in Rviz like Exercise-1
+    # The Point Cloud of Objects
+    pcl_objects_pub = rospy.Publisher('/pcl_objects', PointCloud2, queue_size=1)
+    rospy.loginfo('Created Publisher for objects')
+    
+    # The Point Cloud of the table Only
+    pcl_table_pub = rospy.Publisher('/pcl_table', PointCloud2, queue_size=1)
+    rospy.loginfo('Created Publisher for table')
+
+    # Clustered Point Cloud Objects
+    pcl_cluster_pub = rospy.Publisher('/pcl_cluster', PointCloud2, queue_size=1)
+    rospy.loginfo('Created Publisher for objects cluster')
+
+
+    # DONE: here you need to create two publishers
+    # Call them object_markers_pub and detected_objects_pub
+    # Have them publish to "/object_markers" and "/detected_objects" with 
+    # Message Types "Marker" and "DetectedObjectsArray" , respectively
+    # 
+    # Object maker for Rviz
+    object_markers_pub = rospy.Publisher('/object_markers', Marker, queue_size=1)
+    rospy.loginfo('Created Publisher for Markers')
+
+    # The Result of object recognition 
+    detected_objects_pub = rospy.Publisher('/detected_objects', DetectedObjectsArray, queue_size=1)
+    rospy.loginfo('Created Publisher for DetectedObjectsArray')
 
     # TODO: Load Model From disk
 
     # Initialize color_list
     get_color_list.color_list = []
 
-    # TODO: Spin while node is not shutdown
+    rospy.loginfo('Finished initializing')
+
+    # DONE: Spin while node is not shutdown
+    while not rospy.is_shutdown():
+        rospy.spin()
