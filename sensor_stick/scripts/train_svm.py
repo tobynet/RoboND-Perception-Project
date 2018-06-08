@@ -62,7 +62,7 @@ encoder = LabelEncoder()
 y_train = encoder.fit_transform(y_train)
 
 # Create classifier
-clf = svm.LinearSVC(C=1.0, loss='squared_hinge', penalty='l2')
+clf = svm.LinearSVC(C=10.0, loss='squared_hinge', penalty='l2')
 
 # Set up 5-fold cross-validation
 kf = cross_validation.KFold(len(X_train),
