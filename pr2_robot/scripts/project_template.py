@@ -262,7 +262,6 @@ def pcl_callback(pcl_msg):
     ros_cloud_table = pcl_to_ros(cloud_table)
     ros_cluster_cloud = pcl_to_ros(cluster_cloud)
 
-
     # DONE: Publish ROS messages
     rospy.loginfo(' Publish objects cloud')
     pcl_objects_pub.publish(ros_cloud_objects)
@@ -270,27 +269,55 @@ def pcl_callback(pcl_msg):
     rospy.loginfo(' Publish table cloud')
     pcl_table_pub.publish(ros_cloud_table)
 
-    rospy.loginfo(' Publish cluster_cloud')
+    rospy.loginfo(' Publish colored cluster cloud')
     pcl_cluster_pub.publish(ros_cluster_cloud)
 
-    return
+    rospy.loginfo('DONE the range of Exercise-2')
+
 
 # Exercise-3 TODOs:
+    detected_objects_labels = []
+    detected_objects = []
     detected_objects_list = []
 
     # Classify the clusters! (loop through each detected cluster one at a time)
+    for index, pts_list in enumerate(cluster_indices):
+        # todo: Grab the points for the cluster
+        pcl_cluster = cloud_objects.extract(pts_list)
 
-        # Grab the points for the cluster
+        ros_cluster = pcl_to_ros(pcl_cluster)
 
-        # Compute the associated feature vector
+        # todo: Compute the associated feature vector
+        #  Obtain the vector of object color histograms
+        chists = compute_color_histograms(ros_cluster, using_hsv=True)
+        #  Obtain the vector of object shape histograms 
+        normals = get_normals(ros_cluster)
+        nhists = compute_normal_histograms(normals)
+        #  Make the feature for prediction
+        feature = np.concatenate((chists, nhists))
 
-        # Make the prediction
+        # todo: Make the prediction
+        prediction = clf.predict(scaler.transform(feature.reshape(1,-1)))
+        label = encoder.inverse_transform(prediction)[0]
+        detected_objects_labels.append(label)
 
-        # Publish a label into RViz
+        # todo: Publish a label into RViz
+        label_pos = list(white_cloud[pts_list[0]])
+        label_pos[2] += .4
+        object_markers_pub.publish(make_label(label,label_pos, index))
 
-        # Add the detected object to the list of detected objects.
+        # todo: Add the detected object to the list of detected objects.
+        do = DetectedObject()
+        do.label = label
+        do.cloud = ros_cluster
+        detected_objects.append(do)
 
-    # Publish the list of detected objects
+    rospy.loginfo('Detected {} objects: {}'.format(len(detected_objects_labels), detected_objects_labels))
+
+    # DONE: Publish the list of detected objects
+    detected_objects_pub.publish(detected_objects)
+
+    return
 
     # Suggested location for where to invoke your pr2_mover() function within pcl_callback()
     # Could add some logic to determine whether or not your object detections are robust
@@ -380,7 +407,14 @@ if __name__ == '__main__':
     detected_objects_pub = rospy.Publisher('/detected_objects', DetectedObjectsArray, queue_size=1)
     rospy.loginfo('Created Publisher for DetectedObjectsArray')
 
-    # TODO: Load Model From disk
+
+    # DONE: Load Model From disk
+    model = pickle.load(open('model.sav', 'rb'))
+    clf = model['classifier']
+    encoder = LabelEncoder()
+    encoder.classes_ = model['classes']
+    scaler = model['scaler']
+
 
     # Initialize color_list
     get_color_list.color_list = []

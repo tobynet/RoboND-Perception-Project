@@ -1,4 +1,15 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# To run for make training data
+#  
+#   $ roslaunch sensor_stick training.launch
+#
+# In another terminal
+#
+#   $ rosrun sensor_stick capture_features.py
+
+
 import numpy as np
 import pickle
 import rospy
@@ -24,13 +35,16 @@ if __name__ == '__main__':
     rospy.init_node('capture_node')
 
     models = [\
-       'beer',
-       'bowl',
-       'create',
-       'disk_part',
-       'hammer',
-       'plastic_cup',
-       'soda_can']
+        'biscuits',
+        'book',
+        'eraser',
+        'glue',
+        'snacks',
+        'soap',
+        'soap2',
+        'soda_can',
+        'sticky_notes',
+       ]
     
     # defaut: max_sample_num = 5
     max_sample_num = 100
