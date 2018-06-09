@@ -47,20 +47,22 @@ if __name__ == '__main__':
        ]
     
     # defaut: max_sample_num = 5
-    max_sample_num = 100
+    max_sample_num = 1000
 
     # Disable gravity and delete the ground plane
     initial_setup()
     labeled_features = []
 
     rospy.loginfo('Begin to capture...')
-    for model_name in models:
-        rospy.loginfo('  Spawn model: %s' % model_name)
+    for idx_model, model_name in enumerate(models):
+        rospy.loginfo('  Spawn model: %s(%d/%d)' % 
+                (model_name, idx_model+1, len(models)))
         spawn_model(model_name)
 
 
         for i in range(max_sample_num):
-            rospy.loginfo('    Sampling... %d/%d' % (i+1, max_sample_num))
+            rospy.loginfo('    Sampling...: %s(%d/%d) %d/%d' %
+                    (model_name, idx_model+1, len(models), i+1, max_sample_num))
 
             # make five attempts to get a valid a point cloud then give up
             sample_was_good = False
