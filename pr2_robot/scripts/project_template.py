@@ -338,93 +338,96 @@ def pr2_mover(detected_objects):
     rospy.loginfo('pr2_mover starting...')
 
     # DONE: Initialize variables
-    test_scene_num = Int32(data=1)
+    scene_num = 1
+    test_scene_num = Int32(data=scene_num)
+    yaml_list = []
 
     # label: string -> DetectedObject
-    detected_by_label = dict(
-        (x.label, x) for x in detected_objects)
+    detected_by_label = dict((x.label, x) for x in detected_objects)
+    rospy.loginfo('  detected_label: %s' % ([ x.label for x in detected_objects ]))
 
     # DONE: Get/Read parameters
     # DONE: Parse parameters into individual variables
     # Obtain the original object list
     object_list_param = rospy.get_param('/object_list')
-    rospy.loginfo('object_list in config: %s' % (object_list_param))
+    rospy.loginfo('  object_list in config: %s' % (object_list_param))
 
     dropbox_param = rospy.get_param('/dropbox')
-    rospy.loginfo('dropbox in config: %s' % (dropbox_param))
+    rospy.loginfo('  dropbox in config: %s' % (dropbox_param))
+
     # group: string -> dropbox
-    dropbox_by_group = dict(
-        (x['group'], x) for x in dropbox_param)
-    
-    yaml_list = []
+    dropbox_by_group = dict((x['group'], x) for x in dropbox_param)
+
 
     # TODO: Rotate PR2 in place to capture side tables for the collision map
 
     # DONE: Loop through the pick list
-    rospy.loginfo('Loop through the pick list')
+    rospy.loginfo('  Loop through the pick list')
     for i, obj in enumerate(object_list_param):
-        rospy.loginfo('%s: %d/%d...' % 
-            (obj['name'], i+1, len(object_list_param)))
+
+        rospy.loginfo('%d/%d: %s ...' % (i+1, len(object_list_param), obj['name']))
 
         # DONE: Get the PointCloud for a given object and obtain it's centroid
+        # If not detected then ignore object.
         if not detected_by_label.has_key(obj['name']):
-            rospy.loginfo('  %s NOT detected!' % (obj['name']))
+            rospy.loginfo('    %s NOT detected!' % (obj['name']))
             continue
 
-        rospy.loginfo('  %s detected.' % (obj['name']))
+        rospy.loginfo('    %s detected.' % (obj['name']))
+
         detected = detected_by_label[obj['name']]
-
-        object_name = String(data=obj['name'])
-
         dropbox = dropbox_by_group[obj['group']]
+
+        # Make some variables
+        object_name = String(data=obj['name'])
         which_arm = String(data=dropbox['name'])
 
         # DONE: Create 'place_pose' for the object
         # place_pose = Pose(position=dropbox['position'])
         place_pose = Pose()
-        place_pose.position.x = float(dropbox['position'][0])
-        place_pose.position.y = float(dropbox['position'][1])
-        place_pose.position.z = float(dropbox['position'][2])
+        place_pose.position.x = dropbox['position'][0]
+        place_pose.position.y = dropbox['position'][1]
+        place_pose.position.z = dropbox['position'][2]
 
         # DONE: Assign the arm to be used for pick_place
         centroid = compute_centroid(detected.cloud)
         pick_place = Pose()
-        pick_place.position.x = float(centroid[0])
-        pick_place.position.y = float(centroid[1])
-        pick_place.position.z = float(centroid[2])
+        pick_place.position.x = centroid[0]
+        pick_place.position.y = centroid[1]
+        pick_place.position.z = centroid[2]
 
-        rospy.loginfo('pick_place.position %s' % pick_place.position)
+        rospy.loginfo('    pick_place.position %s' % pick_place.position)
 
         # DONE: Create a list of dictionaries (made with make_yaml_dict()) for later output to yaml format
-        rospy.loginfo('  making yaml...')
-        yaml_dict = make_yaml_dict(
-            test_scene_num, which_arm, object_name, pick_place, place_pose)
+        rospy.loginfo('  making yaml item...')
+        yaml_dict = make_yaml_dict(test_scene_num, which_arm, object_name, pick_place, place_pose)
         yaml_list.append(yaml_dict)
 
         # Wait for 'pick_place_routine' service to come up
-        rospy.loginfo('  waiting pick_place_routine service...')
+        rospy.loginfo('    waiting pick_place_routine service...')
         rospy.wait_for_service('pick_place_routine')
 
         try:
             pick_place_routine = rospy.ServiceProxy('pick_place_routine', PickPlace)
 
             # DONE: Insert your message variables to be sent as a service request
-            rospy.loginfo('  request pick_place_routine.')
-            resp = pick_place_routine(
-                test_scene_num, object_name, 
-                which_arm, pick_place, 
-                place_pose)
-            rospy.loginfo('  pick_place_routine done.')
+            rospy.loginfo('    request pick_place_routine.')
+            resp = pick_place_routine(test_scene_num, object_name, which_arm, pick_place, place_pose)
+            rospy.loginfo('    pick_place_routine done.')
 
-            rospy.loginfo("Response: %s" % resp.success)
+            rospy.loginfo("    Response: %s" % resp.success)
 
         except rospy.ServiceException, e:
-            rospy.loginfo("Service call failed: %s" % e)
+            rospy.loginfo("    Service call failed: %s" % e)
+
 
     # DONE: Output your request parameters into output yaml file
-    rospy.loginfo('Writing yaml...')
-    send_to_yaml('output%s.yaml' % test_scene_num.data, yaml_list)
-    rospy.loginfo('Writing yaml DONE')
+    if 0 < len(yaml_list): 
+        rospy.loginfo('  Writing yaml...')
+        send_to_yaml('output_%s.yaml' % scene_num, yaml_list)
+        rospy.loginfo('  Writing yaml DONE')
+    else:
+        rospy.loginfo('  No detected(yaml not saved)')
 
     rospy.loginfo('pr2_mover DONE')
 
@@ -436,7 +439,6 @@ if __name__ == '__main__':
     rospy.init_node('pr2-robot', anonymous=True)
 
     # DONE: Create Subscribers
-    # PointCloud 用のメッセージを受け取って処理する
     pcl_sub = rospy.Subscriber('/pr2/world/points', pc2.PointCloud2, pcl_callback, queue_size=1)
     rospy.loginfo('Created subscriber')
 
