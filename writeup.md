@@ -234,7 +234,7 @@ After segmentation:
 
 ![pcl_cluster](./misc_images/exercise-2-pcl_cluster.jpg)
 
-* 📃 [One of code of Exercise 2](./Exercise-2/segmentation.py) or [🔗external repository](/tobynet/RoboND-Perception-Exercises/blob/master/Exercise-2/).
+* 📃 [One of code of Exercise 2](./Exercise-2/segmentation.py) or [🔗external repository](https://github.com/tobynet/RoboND-Perception-Exercises/blob/master/Exercise-2/).
 
 #### 2. Complete Exercise 3 Steps.  Features extracted and SVM trained.  Object recognition implemented.
 
@@ -246,7 +246,7 @@ The screenshot in Rviz:
 
 ![object recognition](./misc_images/exercise-3-object_recognition.jpg)
 
-* 📃 [Some of files of Exercise 3](./Exercise-3/) or [🔗external repository](/tobynet/RoboND-Perception-Exercises/tree/master/Exercise-3/).
+* 📃 [Some of files of Exercise 3](./Exercise-3/) or [🔗external repository](https://github.com/tobynet/RoboND-Perception-Exercises/tree/master/Exercise-3/).
 
 ### Pick and Place Setup
 
