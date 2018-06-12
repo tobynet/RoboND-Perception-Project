@@ -26,7 +26,7 @@
     max_sample_num = 1000
     ```
 
-    A snapshot of normalized confusion matrix:
+    A snapshot of normalized confusion matrix(**1000 sample/object**):
 
     ![traing result](./misc_images/svm-normalized-confusion-matrix-1000sample.jpg)
 
@@ -234,13 +234,19 @@ After segmentation:
 
 ![pcl_cluster](./misc_images/exercise-2-pcl_cluster.jpg)
 
-* 📃 [One of code of Exercise 2](./Exercise-2/segmentation.py) or [🔗external reoository](RoboND-Perception-Exercises/tree/master/Exercise-2/).
+* 📃 [One of code of Exercise 2](./Exercise-2/segmentation.py) or [🔗external repository](RoboND-Perception-Exercises/blob/master/Exercise-2/).
 
 #### 2. Complete Exercise 3 Steps.  Features extracted and SVM trained.  Object recognition implemented.
 
+A snapshot of normalized confusion matrix(**100 sample/object**):
+
+![normalized-confusion-matrix](./misc_images/exercise-3-svm-normalized-confusion-matrix-100sample.jpg)
+
+The screenshot in Rviz:
+
 ![object recognition](./misc_images/exercise-3-object_recognition.jpg)
 
-* 📃 [Some of files of Exercise 3](./Exercise-3/) or [🔗external reoository](RoboND-Perception-Exercises/tree/master/Exercise-3/).
+* 📃 [Some of files of Exercise 3](./Exercise-3/) or [🔗external repository](RoboND-Perception-Exercises/blob/master/Exercise-3/).
 
 ### Pick and Place Setup
 
