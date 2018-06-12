@@ -174,19 +174,73 @@ You're reading it!
 
 #### 1. Complete Exercise 1 steps. Pipeline for filtering and RANSAC plane fitting implemented.
 
-* todo: picture
-* todo: 🔗 Exercise 1 (other repository)
+```shell
+$ pcl_viewer tabletop.pcd
+ :
+[done, 930 ms : 202627 points]
+```
+
+![tabletop.pcd](./misc_images/exercise-1-tabletop.pcd.jpg)
+
+---
+
+```shell
+$ pcl_viewer voxel_downsampled.pcd
+ :
+[done, 292 ms : 55336 points]
+Available dimensions: x y z rgb
+```
+
+![voxel_downsampled.pcd](./misc_images/exercise-1-voxel_downsampled.pcd.jpg) 
+
+---
+
+```shell
+$ pcl_viewer pass_through_filtered.pcd
+ :
+[done, 134 ms : 14476 points]
+Available dimensions: x y z rgb
+```
+
+![pass_through_filtered.pcd](./misc_images/exercise-1-pass_through_filtered.pcd.jpg)
+
+---
+
+```shell
+$ pcl_viewer extracted_outliers.pcd
+ :
+[done, 77 ms : 3838 points]
+Available dimensions: x y z rgb
+
+$ pcl_viewer extracted_inliers.pcd
+ :
+[done, 128 ms : 10638 points]
+Available dimensions: x y z rgb
+```
+
+![extracted_outliers.pcd](./misc_images/exercise-1-extracted_outliers-objects.pcd.jpg)
+
+![extracted_inliers.pcd](./misc_images/exercise-1-extracted_inliers-table.pcd.jpg)
+
+* 📃 [The code of Exercise 1](./Exercise-1/RANSAC.py)
 
 #### 2. Complete Exercise 2 steps: Pipeline including clustering for segmentation implemented.  
 
-* todo: picture
-* todo: 🔗 Exercise 2 (other repository)
+Before segmentation:
+
+![sensor_stick-point_cloud](./misc_images/exercise-2-sensor_stick-point_cloud.jpg)
+
+After segmentation:
+
+![pcl_cluster](./misc_images/exercise-2-pcl_cluster.jpg)
+
+* 📃 [One of code of Exercise 2](./Exercise-2/segmentation.py) or [🔗external reoository](RoboND-Perception-Exercises/tree/master/Exercise-2/).
 
 #### 2. Complete Exercise 3 Steps.  Features extracted and SVM trained.  Object recognition implemented.
-Here is an example of how to include an image in your writeup.
 
-* todo: picture, SVM.
-* todo: 🔗 Exercise 3 (other repository)
+![object recognition](./misc_images/exercise-3-object_recognition.jpg)
+
+* 📃 [Some of files of Exercise 3](./Exercise-3/) or [🔗external reoository](RoboND-Perception-Exercises/tree/master/Exercise-3/).
 
 ### Pick and Place Setup
 
